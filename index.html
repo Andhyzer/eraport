@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>E-Rapor Kurikulum Merdeka | Kemendikdasmen</title>
+<meta name="description" content="Sistem Informasi E-Rapor Kurikulum Merdeka - Multi-role, AI-powered, terintegrasi Dapodik" />
+<meta name="theme-color" content="#0284c7" />
+<link rel="manifest" href="./manifest.json" />
+
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script>
+tailwind.config = {
+  theme: {
+    extend: {
+      colors: {
+        navy: '#0f172a',
+        eduBlue: '#0284c7',
+        accentYellow: '#eab308',
+      },
+      fontFamily: { sans: ['Inter', 'system-ui', 'sans-serif'] }
+    }
+  }
+}
+</script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./assets/style.css" />
+</head>
+<body class="bg-slate-100 text-navy">
+
+<!-- LOADING OVERLAY -->
+<div id="loader" class="fixed inset-0 z-[999] bg-white flex items-center justify-center">
+  <div class="text-center">
+    <div class="w-14 h-14 border-4 border-eduBlue border-t-transparent rounded-full animate-spin mx-auto"></div>
+    <p class="mt-4 text-navy font-semibold">Memuat E-Rapor...</p>
+    <p class="text-xs text-slate-500 mt-1">Sistem Informasi Kurikulum Merdeka</p>
+  </div>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="hidden fixed inset-0 z-[900] bg-gradient-to-br from-navy via-slate-900 to-eduBlue flex items-center justify-center p-4">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+    <div class="text-center mb-6">
+      <div class="w-16 h-16 bg-navy rounded-xl flex items-center justify-center mx-auto mb-3">
+        <span class="text-accentYellow font-extrabold text-2xl">ER</span>
+      </div>
+      <h1 class="text-2xl font-bold text-navy">E-Rapor Kurikulum Merdeka</h1>
+      <p class="text-slate-500 text-sm mt-1">Sistem Informasi Penilaian Sekolah</p>
+    </div>
+
+    <form id="loginForm" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-navy mb-1">Username</label>
+        <input id="username" required autocomplete="username"
+          class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-eduBlue focus:border-eduBlue outline-none"
+          placeholder="admin / guru / wali / kepsek / siswa" />
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-navy mb-1">Password</label>
+        <input id="password" type="password" required autocomplete="current-password"
+          class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-eduBlue focus:border-eduBlue outline-none"
+          placeholder="••••••••" />
+      </div>
+      <button type="submit" class="w-full bg-eduBlue hover:bg-blue-700 text-white font-semibold py-2.5 rounded-lg transition">
+        Masuk Sistem
+      </button>
+      <div class="p-3 bg-blue-50 rounded-lg text-xs text-slate-600">
+        <b class="text-navy">Demo Login:</b><br>
+        admin/admin123 · guru/guru123 · wali/wali123<br>
+        kepsek/kepsek123 · siswa/siswa123
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- APP SHELL -->
+<div id="app" class="hidden min-h-screen flex">
+  <!-- SIDEBAR DESKTOP -->
+  <aside class="w-64 bg-navy text-white flex-shrink-0 hidden md:flex flex-col h-screen sticky top-0">
+    <div class="p-5 border-b border-white/10 flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-eduBlue rounded-lg flex items-center justify-center font-bold flex-shrink-0">ER</div>
+        <div class="min-w-0">
+          <h2 class="font-bold text-sm truncate">E-Rapor</h2>
+          <p class="text-[10px] text-slate-400 truncate">Kurikulum Merdeka</p>
+        </div>
+      </div>
+    </div>
+    <nav id="sidebarMenu" class="flex-1 overflow-y-auto scrollbar-thin py-4 px-3 space-y-1"></nav>
+    <div class="p-4 border-t border-white/10 text-xs text-slate-400 flex-shrink-0">
+      <div id="sessionInfo">Belum login</div>
+      <button onclick="logout()" class="mt-2 w-full bg-red-500/20 hover:bg-red-500/40 text-red-300 text-xs py-2 rounded transition">Logout</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <div class="flex-1 flex flex-col min-w-0">
+    <header class="bg-white border-b border-slate-200 px-4 md:px-6 py-3 flex items-center justify-between sticky top-0 z-40 flex-shrink-0">
+      <div class="flex items-center gap-3">
+        <button onclick="toggleSidebar()" class="md:hidden p-2 hover:bg-slate-100 rounded">☰</button>
+        <div>
+          <h1 id="pageTitle" class="font-bold text-navy text-lg">Dashboard</h1>
+          <p id="pageBreadcrumb" class="text-xs text-slate-500">Home</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div class="hidden md:flex items-center gap-2 bg-slate-100 rounded-full px-3 py-1.5">
+          <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+          <span class="text-xs text-slate-600">Online</span>
+        </div>
+        <div class="w-9 h-9 bg-eduBlue text-white rounded-full flex items-center justify-center font-bold text-sm" id="userAvatar">A</div>
+      </div>
+    </header>
+
+    <main id="mainContent" class="flex-1 p-4 md:p-6 overflow-y-auto"></main>
+  </div>
+</div>
+
+<!-- MOBILE SIDEBAR -->
+<div id="mobileSidebar" class="hidden fixed inset-0 z-50 md:hidden">
+  <div class="absolute inset-0 bg-black/50" onclick="toggleSidebar()"></div>
+  <aside class="w-64 bg-navy text-white h-full flex flex-col relative">
+    <div class="p-5 border-b border-white/10 flex justify-between items-center">
+      <h2 class="font-bold">E-Rapor</h2>
+      <button onclick="toggleSidebar()" class="text-2xl">&times;</button>
+    </div>
+    <nav id="mobileSidebarMenu" class="flex-1 overflow-y-auto py-4 px-3 space-y-1"></nav>
+  </aside>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toastContainer" class="fixed top-4 right-4 z-[1100] space-y-2"></div>
+
+<!-- SCRIPTS -->
+<script src="./assets/cache.js"></script>
+<script src="./assets/notif.js"></script>
+<script src="./assets/qrcode-sign.js"></script>
+<script src="./assets/excel.js"></script>
+<script src="./assets/multitenant.js"></script>
+<script src="./assets/backup.js"></script>
+<script src="./assets/dapodik.js"></script>
+<script src="./assets/gemini.js"></script>
+<script src="./assets/template-upload.js"></script>
+<script src="./assets/rapor-template.js"></script>
+<script src="./assets/analytics.js"></script>
+<script src="./assets/analytics-ui.js"></script>
+<script src="./assets/app.js"></script>
+
+<!-- PWA -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(err => console.warn('SW:', err));
+    });
+  }
+</script>
+</body>
+</html>
